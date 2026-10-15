@@ -4,7 +4,7 @@ from pathlib import Path
 README_PATH = Path(__file__).resolve().parents[1] / "README.md"
 
 USAGE_LINES = """usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION
-       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... LIST
+       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST
        spdxok ids LIST"""
 
 DEPENDENCIES = """# dependency licenses

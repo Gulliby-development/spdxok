@@ -6,7 +6,7 @@ from spdxok.listing import Package
 
 _USAGE = (
     "usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION\n"
-    "       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... LIST\n"
+    "       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST\n"
     "       spdxok ids LIST\n"
 )
 
@@ -36,12 +36,16 @@ def evaluation_report(result: Evaluation) -> str:
 
 
 def check_report(
-    packages: Sequence[Package], evaluations: Sequence[Evaluation]
+    packages: Sequence[Package],
+    evaluations: Sequence[Evaluation],
+    include_all: bool = False,
 ) -> tuple[str, int]:
     lines: list[str] = []
     blocked = 0
     for package, result in zip(packages, evaluations):
         if result.satisfied:
+            if include_all:
+                lines.append(f"{package.name}: {evaluation_report(result)[:-1]}")
             continue
         blocked += 1
         blockers = ", ".join(
