@@ -7,7 +7,7 @@ from spdxok.cli import main
 
 HELP = (
     "usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION\n"
-    "       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... LIST\n"
+    "       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST\n"
     "       spdxok ids LIST\n"
 )
 
@@ -395,3 +395,148 @@ def test_stdin_read_failure_uses_the_stdin_display_name():
     assert (status, stdout.getvalue(), stderr.getvalue()) == _error(
         "<stdin>: cannot read the file"
     )
+
+
+def test_check_all_mixed_report_matches_example_for_stdin_and_file(tmp_path):
+    text = (
+        "left-pad MIT\n"
+        "express (MIT OR GPL-3.0)\n"
+        "libfoo GPL-2.0 WITH Classpath-exception-2.0\n"
+        "zlib-ng Zlib\n"
+        "tool Apache-2.0 AND GPL-3.0\n"
+    )
+    expected = (
+        "left-pad: ok: uses MIT\n"
+        "express: ok: uses MIT\n"
+        "libfoo: blocked: GPL-2.0 WITH Classpath-exception-2.0 (not allowed)\n"
+        "zlib-ng: ok: uses Zlib\n"
+        "tool: blocked: Apache-2.0 (not allowed), GPL-3.0 (not allowed)\n"
+        "2 of 5 packages blocked\n"
+    )
+    assert _run(["check", "--allow", "MIT,Zlib", "--all", "-"], text.encode()) == (
+        1,
+        expected,
+        "",
+    )
+
+    dependencies = tmp_path / "deps.txt"
+    dependencies.write_text(text, encoding="utf-8", newline="\n")
+    assert _run(
+        ["check", "--allow", "MIT,Zlib", "--all", str(dependencies)]
+    ) == (1, expected, "")
+
+
+def test_check_all_accepted_report_matches_example_for_stdin_and_file(tmp_path):
+    text = (
+        "left-pad MIT\n"
+        "express (MIT OR GPL-3.0)\n"
+        "libfoo GPL-2.0 WITH Classpath-exception-2.0\n"
+        "zlib-ng Zlib\n"
+        "tool Apache-2.0 AND GPL-3.0\n"
+    )
+    expected = (
+        "left-pad: ok: uses MIT\n"
+        "express: ok: uses MIT\n"
+        "libfoo: ok: uses GPL-2.0 WITH Classpath-exception-2.0\n"
+        "zlib-ng: ok: uses Zlib\n"
+        "tool: ok: uses Apache-2.0, GPL-3.0\n"
+        "ok, 5 packages\n"
+    )
+    allow = "MIT,GPL-2.0,Zlib,Apache-2.0,GPL-3.0"
+    assert _run(["check", "--allow", allow, "--all", "-"], text.encode()) == (
+        0,
+        expected,
+        "",
+    )
+
+    dependencies = tmp_path / "deps.txt"
+    dependencies.write_text(text, encoding="utf-8", newline="\n")
+    assert _run(["check", "--allow", allow, "--all", str(dependencies)]) == (
+        0,
+        expected,
+        "",
+    )
+
+
+def test_check_without_all_keeps_example_output_for_stdin_and_file(tmp_path):
+    text = (
+        "left-pad MIT\n"
+        "express (MIT OR GPL-3.0)\n"
+        "libfoo GPL-2.0 WITH Classpath-exception-2.0\n"
+        "zlib-ng Zlib\n"
+        "tool Apache-2.0 AND GPL-3.0\n"
+    )
+    expected = (
+        "libfoo: blocked: GPL-2.0 WITH Classpath-exception-2.0 (not allowed)\n"
+        "tool: blocked: Apache-2.0 (not allowed), GPL-3.0 (not allowed)\n"
+        "2 of 5 packages blocked\n"
+    )
+    assert _run(["check", "--allow", "MIT,Zlib", "-"], text.encode()) == (
+        1,
+        expected,
+        "",
+    )
+
+    dependencies = tmp_path / "deps.txt"
+    dependencies.write_text(text, encoding="utf-8", newline="\n")
+    assert _run(["check", "--allow", "MIT,Zlib", str(dependencies)]) == (
+        1,
+        expected,
+        "",
+    )
+
+
+def test_check_all_flag_placements_repetition_and_policy_value_consumption():
+    expected = (0, "a: ok: uses MIT\nok, 1 package\n", "")
+    arguments = [
+        ["check", "--all", "--allow", "MIT", "--deny", "GPL-3.0", "-"],
+        ["check", "--allow", "MIT", "--all", "--deny", "GPL-3.0", "-", "--all"],
+        [
+            "check",
+            "--allow",
+            "MIT",
+            "--deny",
+            "GPL-3.0",
+            "-",
+            "--all",
+            "--all",
+            "--all",
+        ],
+    ]
+    for argument_list in arguments:
+        assert _run(argument_list, b"a MIT\n") == expected
+
+    assert _run(["check", "--allow", "--all", "-"]) == _error(
+        'invalid license "--all" in --allow'
+    )
+
+
+def test_check_all_empty_list():
+    assert _run(["check", "--deny", "GPL-3.0", "--all", "-"]) == (
+        0,
+        "ok, 0 packages\n",
+        "",
+    )
+
+
+def test_check_all_singular_list():
+    assert _run(
+        ["check", "--deny", "GPL-3.0", "--all", "-"], b"a MIT\n"
+    ) == (0, "a: ok: uses MIT\nok, 1 package\n", "")
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        (["eval", "--all", "--allow", "MIT", "MIT"], 'unknown option "--all"'),
+        (["ids", "--all", "LIST"], 'unknown option "--all"'),
+        (["check", "--all=1", "--allow", "MIT", "LIST"], 'unknown option "--all=1"'),
+        (["check", "--all"], "missing LIST"),
+        (
+            ["check", "--all", "LIST"],
+            "no policy given (use --allow, --allow-file or --deny)",
+        ),
+    ],
+)
+def test_all_option_errors_preserve_status_streams_and_precedence(arguments, message):
+    assert _run(arguments) == _error(message)

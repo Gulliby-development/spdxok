@@ -20,7 +20,7 @@ The command has three operations:
 
 ```text
 usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION
-       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... LIST
+       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST
        spdxok ids LIST
 ```
 
@@ -73,6 +73,8 @@ Use `ids` to count licenses used by packages in the list:
 ```
 
 For standard input, use `-` in place of the list path. The `--allow`, `--deny`, and `--allow-file` options can be repeated. Inline ID lists are comma-separated; allow files contain one license entry per line.
+
+Add `--all` to `check` to print a line for every package, not only for the blocked ones. A package that passes prints `NAME: ok: uses LICENSES`, in the form `eval` uses for an expression, for example `left-pad: ok: uses MIT`. The lines keep the order of the list; the last line and the exit code do not change. `--all` is an option of `check` only and takes no value.
 
 ## Expressions
 

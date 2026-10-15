@@ -63,7 +63,7 @@ def _load_allow_file(path: str, policy: Policy) -> None:
 
 def _parse_arguments(
     arguments: Sequence[str],
-) -> tuple[str, str, Policy, list[str]]:
+) -> tuple[str, str, Policy, list[str], bool]:
     if not arguments:
         raise _CLIError("missing command (eval, check or ids)")
 
@@ -77,6 +77,7 @@ def _parse_arguments(
     policy = Policy()
     policy_given = False
     positional: str | None = None
+    include_all = False
     index = 1
     while index < len(arguments):
         argument = arguments[index]
@@ -104,6 +105,10 @@ def _parse_arguments(
                         raise _CLIError(
                             f'invalid license "{entry}" in {option}'
                         ) from error
+        elif argument == "--all":
+            if command != "check":
+                raise _CLIError(f'unknown option "{argument}"')
+            include_all = True
         elif argument.startswith("-") and argument != "-":
             raise _CLIError(f'unknown option "{argument}"')
         elif positional is None:
@@ -118,7 +123,7 @@ def _parse_arguments(
         raise _CLIError("missing LIST")
     if command != "ids" and not policy_given:
         raise _CLIError("no policy given (use --allow, --allow-file or --deny)")
-    return command, positional, policy, allow_files
+    return command, positional, policy, allow_files, include_all
 
 
 def _read_list(
@@ -155,7 +160,7 @@ def main(
         return 0
 
     try:
-        command, positional, policy, allow_files = _parse_arguments(argv)
+        command, positional, policy, allow_files, include_all = _parse_arguments(argv)
         for allow_file in allow_files:
             _load_allow_file(allow_file, policy)
 
@@ -171,7 +176,7 @@ def main(
         _, packages = _read_list(positional, input_stream)
         if command == "check":
             results: list[Evaluation] = [evaluate(package.expression, policy) for package in packages]
-            report, status = check_report(packages, results)
+            report, status = check_report(packages, results, include_all)
             output.write(report)
             return status
 
