@@ -12,6 +12,8 @@ From the project root, install the package with:
 
 `pip install .`
 
+The install adds the `spdxok` command, so `spdxok eval --allow MIT "MIT OR GPL-3.0"` works from any folder, exactly like `python -m spdxok eval --allow MIT "MIT OR GPL-3.0"`.
+
 You can also run it directly from the project root with `python -m spdxok`.
 
 ## Usage
