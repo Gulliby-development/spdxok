@@ -7,7 +7,7 @@ from spdxok.listing import Package
 _USAGE = (
     "usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION\n"
     "       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST\n"
-    "       spdxok ids LIST\n"
+    "       spdxok ids [--min COUNT] LIST\n"
 )
 
 
@@ -62,7 +62,7 @@ def check_report(
     return "\n".join(lines) + "\n", 0
 
 
-def ids_report(packages: Sequence[Package]) -> str:
+def ids_report(packages: Sequence[Package], minimum: int = 1) -> str:
     spellings: dict[tuple[str, str | None], str] = {}
     counts: dict[tuple[str, str | None], int] = {}
     for package in packages:
@@ -78,12 +78,16 @@ def ids_report(packages: Sequence[Package]) -> str:
         counts,
         key=lambda key: (-counts[key], spellings[key].lower().encode("utf-8")),
     )
-    width = max((len(str(counts[key])) for key in ordered), default=1)
-    lines = [f"{counts[key]:>{width}}  {spellings[key]}" for key in ordered]
+    shown = [key for key in ordered if counts[key] >= minimum]
+    width = max((len(str(counts[key])) for key in shown), default=1)
+    lines = [f"{counts[key]:>{width}}  {spellings[key]}" for key in shown]
     license_count = len(ordered)
     license_word = "license" if license_count == 1 else "licenses"
     package_word = "package" if len(packages) == 1 else "packages"
-    lines.append(f"{license_count} distinct {license_word} in {len(packages)} {package_word}")
+    prefix = f"{len(shown)} of " if len(shown) < license_count else ""
+    lines.append(
+        f"{prefix}{license_count} distinct {license_word} in {len(packages)} {package_word}"
+    )
     return "\n".join(lines) + "\n"
 
 

@@ -5,7 +5,7 @@ README_PATH = Path(__file__).resolve().parents[1] / "README.md"
 
 USAGE_LINES = """usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION
        spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST
-       spdxok ids LIST"""
+       spdxok ids [--min COUNT] LIST"""
 
 DEPENDENCIES = """# dependency licenses
 left-pad MIT

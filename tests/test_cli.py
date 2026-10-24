@@ -8,7 +8,7 @@ from spdxok.cli import main
 HELP = (
     "usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION\n"
     "       spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST\n"
-    "       spdxok ids LIST\n"
+    "       spdxok ids [--min COUNT] LIST\n"
 )
 
 
