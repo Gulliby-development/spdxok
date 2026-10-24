@@ -61,9 +61,15 @@ def _load_allow_file(path: str, policy: Policy) -> None:
             raise _CLIError(f'{display}:{line_number}: invalid license "{entry}"') from error
 
 
+def _parse_minimum(value: str) -> int:
+    if not value.isascii() or not value.isdigit() or value.strip("0") == "" or len(value) > 9:
+        raise _CLIError(f'invalid --min "{value}"')
+    return int(value)
+
+
 def _parse_arguments(
     arguments: Sequence[str],
-) -> tuple[str, str, Policy, list[str], bool]:
+) -> tuple[str, str, Policy, list[str], bool, int]:
     if not arguments:
         raise _CLIError("missing command (eval, check or ids)")
 
@@ -78,6 +84,7 @@ def _parse_arguments(
     policy_given = False
     positional: str | None = None
     include_all = False
+    minimum = 1
     index = 1
     while index < len(arguments):
         argument = arguments[index]
@@ -105,6 +112,17 @@ def _parse_arguments(
                         raise _CLIError(
                             f'invalid license "{entry}" in {option}'
                         ) from error
+        elif argument == "--min" or argument.startswith("--min="):
+            if command != "ids":
+                raise _CLIError(f'unknown option "{argument}"')
+            if argument == "--min":
+                if index + 1 >= len(arguments):
+                    raise _CLIError("--min needs a value")
+                index += 1
+                value = arguments[index]
+            else:
+                value = argument[len("--min=") :]
+            minimum = _parse_minimum(value)
         elif argument == "--all":
             if command != "check":
                 raise _CLIError(f'unknown option "{argument}"')
@@ -123,7 +141,7 @@ def _parse_arguments(
         raise _CLIError("missing LIST")
     if command != "ids" and not policy_given:
         raise _CLIError("no policy given (use --allow, --allow-file or --deny)")
-    return command, positional, policy, allow_files, include_all
+    return command, positional, policy, allow_files, include_all, minimum
 
 
 def _read_list(
@@ -160,7 +178,7 @@ def main(
         return 0
 
     try:
-        command, positional, policy, allow_files, include_all = _parse_arguments(argv)
+        command, positional, policy, allow_files, include_all, minimum = _parse_arguments(argv)
         for allow_file in allow_files:
             _load_allow_file(allow_file, policy)
 
@@ -180,7 +198,7 @@ def main(
             output.write(report)
             return status
 
-        output.write(ids_report(packages))
+        output.write(ids_report(packages, minimum))
         return 0
     except _CLIError as error:
         errors.write(error_report(str(error)))

@@ -23,7 +23,7 @@ The command has three operations:
 ```text
 usage: spdxok eval [--allow IDS]... [--allow-file FILE]... [--deny IDS]... EXPRESSION
        spdxok check [--allow IDS]... [--allow-file FILE]... [--deny IDS]... [--all] LIST
-       spdxok ids LIST
+       spdxok ids [--min COUNT] LIST
 ```
 
 Use `eval` to check one quoted expression, for example:
@@ -72,6 +72,15 @@ Use `ids` to count licenses used by packages in the list:
 1  ISC
 1  Zlib
 9 distinct licenses in 7 packages
+```
+
+Add `--min COUNT` to `ids` to hide the licenses that fewer than COUNT packages use. COUNT is a positive whole number of at most 9 digits, given as `--min 2` or `--min=2`; when the option is repeated the last value wins, and `eval` and `check` do not accept it. The summary line then reads `K of T distinct licenses in N packages` when some licenses are hidden (K shown, T in all). For the same `deps.txt`:
+
+```console
+$ spdxok ids --min 2 deps.txt
+3  MIT
+2  GPL-3.0
+2 of 9 distinct licenses in 7 packages
 ```
 
 For standard input, use `-` in place of the list path. The `--allow`, `--deny`, and `--allow-file` options can be repeated. Inline ID lists are comma-separated; allow files contain one license entry per line.
